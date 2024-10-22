@@ -256,20 +256,34 @@ C10_HOST_DEVICE inline scalar_t zeta(scalar_t x, scalar_t q) __ubsan_ignore_floa
 
   int i = 0;
   acc_t a, b, k, s, t, w;
-  if (x == one) {
-    return std::numeric_limits<scalar_t>::infinity();
+  constexpr scalar_t inf = std::numeric_limits<scalar_t>::infinity();
+  constexpr scalar_t nan = std::numeric_limits<scalar_t>::quiet_NaN();
+  if (std::isnan(x) || std::isnan(q)) {
+    return nan;
+  }
+  if (x == inf && q == inf) {
+    return static_cast<scalar_t>(zero);
+  }
+  if (x == -inf && q == inf) {
+    return static_cast<scalar_t>(one);
+  }
+  if (q == -inf) {
+    return nan;
   }
 
+  if (x == one) {
+    return inf;
+  }
   if (x < one) {
-    return std::numeric_limits<scalar_t>::quiet_NaN();
+    return nan;
   }
 
   if (q <= zero) {
     if (q == std::floor(q)) {
-      return std::numeric_limits<scalar_t>::infinity();
+      return inf;
     }
     if (x != std::floor(x)) {
-      return std::numeric_limits<scalar_t>::quiet_NaN();
+      return nan;
     }
   }
 
