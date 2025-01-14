@@ -185,6 +185,27 @@ static PyMappingMethods THPSize_as_mapping = {
     wrap_tuple_fn<decltype(&mp_subscript), &mp_subscript>,
     nullptr};
 
+static PyObject* THPSize_add(PyObject* _self, PyObject* other) {
+  HANDLE_TH_ERRORS
+  if (PyTuple_Check(other)) {
+      PyObject *result = PySequence_Concat(other, _self);
+      if (result == NULL) {
+          return NULL;  // 出错时返回 NULL
+      }
+      return result;
+  }
+
+  auto self = (THPSize*)_self;
+  if (Py_TYPE(other) == &PyTuple_Type) {
+    return PyErr_Format(PyExc_TypeError, "tuple");
+  } else if (Py_TYPE(other) == &PyList_Type) {
+    return PyErr_Format(PyExc_TypeError, "list");
+  } else {
+    return PyErr_Format(PyExc_TypeError, "hit");
+  }
+  END_HANDLE_TH_ERRORS
+}
+
 static PyObject* THPSize_numel(PyObject* _self, PyObject* noargs) {
   HANDLE_TH_ERRORS
   auto self = (THPSize*)_self;
@@ -225,10 +246,17 @@ static PyObject* THPSize_reduce(PyObject* _self, PyObject* noargs) {
   END_HANDLE_TH_ERRORS
 }
 
+static PyNumberMethods THPSize_as_number = {
+//    .nb_add = (binaryfunc)PyTuple_Type.tp_as_number->nb_add,
+//    .nb_radd = (binaryfunc)THPSize_add,
+};
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays)
 static PyMethodDef THPSize_methods[] = {
     {"numel", THPSize_numel, METH_NOARGS, nullptr},
     {"__reduce__", THPSize_reduce, METH_NOARGS, nullptr},
+//    {"__add__", THPSize_add, METH_O, nullptr},
+//    {"__radd__", THPSize_radd, METH_O, nullptr},
     {nullptr}};
 
 PyTypeObject THPSizeType = {
@@ -242,7 +270,7 @@ PyTypeObject THPSizeType = {
     nullptr, /* tp_setattr */
     nullptr, /* tp_reserved */
     (reprfunc)THPSize_repr, /* tp_repr */
-    nullptr, /* tp_as_number */
+    &THPSize_as_number, /* tp_as_number */
     &THPSize_as_sequence, /* tp_as_sequence */
     &THPSize_as_mapping, /* tp_as_mapping */
     nullptr, /* tp_hash  */

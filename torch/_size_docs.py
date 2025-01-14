@@ -4,6 +4,7 @@ import torch._C
 from torch._C import _add_docstr as add_docstr
 
 
+# TODO
 def add_docstr_all(method: str, docstr: str) -> None:
     add_docstr(getattr(torch._C.Size, method), docstr)
 
