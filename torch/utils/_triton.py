@@ -1,6 +1,12 @@
 # mypy: allow-untyped-defs
 import functools
 import hashlib
+from typing import Callable, TYPE_CHECKING, Union
+
+
+if TYPE_CHECKING:
+    import torch
+    from torch._dynamo.device_interface import DeviceInterface
 
 
 @functools.lru_cache(None)
@@ -61,6 +67,18 @@ def has_triton_tma_device():
     return False
 
 
+triton_supported_devices: dict[Union[str, torch.device], type[DeviceInterface]] = {}
+
+
+def register_triton_backend(
+    device: Union[str, torch.device],
+    extra_check: Callable[[DeviceInterface], bool] = lambda x: True,
+):
+    device_type = device.type if isinstance(device, torch.device) else device
+    if device_type not in triton_supported_devices:
+        triton_supported_devices[device_type] = extra_check
+
+
 @functools.lru_cache(None)
 def has_triton() -> bool:
     if not has_triton_package():
@@ -79,11 +97,9 @@ def has_triton() -> bool:
     def _return_true(device_interface):
         return True
 
-    triton_supported_devices = {
-        "cuda": cuda_extra_check,
-        "xpu": _return_true,
-        "cpu": cpu_extra_check,
-    }
+    register_triton_backend("cpu", cpu_extra_check)
+    register_triton_backend("cuda", cuda_extra_check)
+    register_triton_backend("xpu", _return_true)
 
     def is_device_compatible_with_triton():
         for device, extra_check in triton_supported_devices.items():
