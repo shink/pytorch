@@ -27,6 +27,7 @@ import sys
 import types
 import warnings
 from typing import Optional, TYPE_CHECKING
+from typing_extensions import override
 
 import torch._C
 import torch._numpy as tnp
@@ -313,6 +314,7 @@ class ExceptionVariable(VariableTracker):
         codegen_attr("__cause__")
         codegen_attr("__suppress_context__")
 
+    @override
     def python_type(self):
         return self.exc_type
 
@@ -856,6 +858,7 @@ class GetAttrVariable(VariableTracker):
         self.name = name
         self.py_type = py_type  # In some cases we know the type (ex. tensor methods)
 
+    @override
     def python_type(self):
         if self.py_type is not None:
             return self.py_type
@@ -1044,6 +1047,7 @@ class PythonModuleVariable(VariableTracker):
         self.value = value
         self.is_torch = self.value is torch or self.value.__name__.startswith("torch.")
 
+    @override
     def python_type(self):
         return types.ModuleType
 
@@ -1576,6 +1580,7 @@ class RandomVariable(VariableTracker):
             seed = seed.as_python_constant() if seed is not None else None
             self.random = random.Random(seed)
 
+    @override
     def python_type(self):
         return random.Random
 

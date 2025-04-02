@@ -24,6 +24,7 @@ import inspect
 import sys
 import warnings
 from typing import TYPE_CHECKING, Union
+from typing_extensions import override
 
 import torch._C
 from torch._guards import Guard
@@ -1227,6 +1228,7 @@ class StreamVariable(VariableTracker):
         self.value = value
         self.device = device
 
+    @override
     def python_type(self):
         return torch.Stream
 

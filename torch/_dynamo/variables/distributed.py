@@ -23,6 +23,7 @@ checks and proper tracking of distributed state and operations across processes.
 import functools
 import inspect
 from typing import TYPE_CHECKING
+from typing_extensions import overload
 
 import torch
 from torch.fx.experimental._backward_state import BackwardState
@@ -66,6 +67,7 @@ class DistributedVariable(VariableTracker):
             )
         self.value = value
 
+    @overload
     def python_type(self):
         return type(self.value)
 
@@ -121,6 +123,7 @@ class WorldMetaClassVariable(DistributedVariable):
 
         return type(value) is _WorldMeta
 
+    @overload
     def var_getattr(self, tx: "InstructionTranslator", name: str) -> VariableTracker:
         if name == "WORLD":
             source = AttrSource(base=self.source, member="WORLD")
@@ -144,9 +147,11 @@ class PlacementClassVariable(DistributedVariable):
 
         return type(value) is type and issubclass(value, Placement)
 
+    @overload
     def as_python_constant(self):
         return self.value
 
+    @overload
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -179,14 +184,17 @@ class PlacementVariable(DistributedVariable):
 
         return isinstance(value, Placement)
 
+    @overload
     def as_python_constant(self):
         return self.value
 
+    @overload
     def var_getattr(self, tx: "InstructionTranslator", name: str) -> VariableTracker:
         if name == "dim":
             return ConstantVariable.create(self.value.dim)
         return super().var_getattr(tx, name)
 
+    @overload
     def call_method(
         self,
         tx,
@@ -243,9 +251,11 @@ class DeviceMeshVariable(DistributedVariable):
 
         return istype(value, DeviceMesh)
 
+    @overload
     def as_python_constant(self):
         return self.value
 
+    @overload
     def var_getattr(self, tx: "InstructionTranslator", name: str) -> VariableTracker:
         if name == "ndim":
             return ConstantVariable.create(self.value.ndim)
@@ -253,6 +263,7 @@ class DeviceMeshVariable(DistributedVariable):
             return ConstantVariable.create(self.value.device_type)
         return super().var_getattr(tx, name)
 
+    @overload
     def call_method(
         self,
         tx,
@@ -296,9 +307,11 @@ class ProcessGroupVariable(DistributedVariable):
           or just graph-break whenever one of our special cases is not hit?
     """
 
+    @overload
     def as_python_constant(self):
         return self.value
 
+    @overload
     def call_method(
         self,
         tx,
@@ -315,6 +328,7 @@ class ProcessGroupVariable(DistributedVariable):
 
         return super().call_method(tx, name, args, kwargs)
 
+    @overload
     def var_getattr(self, tx: "InstructionTranslator", name):
         if name == "group_name":
             return variables.ConstantVariable.create(self.value.group_name)
@@ -414,12 +428,14 @@ class BackwardHookVariable(VariableTracker):
         self.user_hooks = user_hooks
         self.user_pre_hooks = user_pre_hooks
 
+    @overload
     def as_proxy(self):
         return self.proxy
 
+    @overload
     def call_method(
         self,
-        tx,
+        tx: "InstructionTranslator",
         name,
         args: list[VariableTracker],
         kwargs: dict[str, VariableTracker],

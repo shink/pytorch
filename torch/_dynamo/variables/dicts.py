@@ -24,6 +24,7 @@ import collections
 import functools
 import types
 from typing import Optional, TYPE_CHECKING
+from typing_extensions import override
 
 from torch._subclasses.fake_tensor import is_fake
 
@@ -200,6 +201,7 @@ class ConstDictVariable(VariableTracker):
         self.original_items = items.copy()
         self.user_cls = user_cls
 
+    @override
     def as_proxy(self):
         return {k.vt.as_proxy(): v.as_proxy() for k, v in self.items.items()}
 
@@ -212,6 +214,7 @@ class ConstDictVariable(VariableTracker):
             + "}"
         )
 
+    @override
     def as_python_constant(self):
         return {
             k.vt.as_python_constant(): v.as_python_constant()
@@ -222,6 +225,7 @@ class ConstDictVariable(VariableTracker):
         self.install_dict_keys_match_guard()
         return {k.vt.as_python_constant(): v for k, v in self.items.items()}
 
+    @override
     def python_type(self):
         return self.user_cls
 
@@ -257,6 +261,7 @@ class ConstDictVariable(VariableTracker):
             return id(value.realize()) != id(other.realize())
         return id(value) != id(other)
 
+    @override
     def reconstruct(self, codegen):
         # instructions to load collections.OrderedDict if necessary
         if self.user_cls is collections.OrderedDict:
@@ -362,6 +367,7 @@ class ConstDictVariable(VariableTracker):
             else:
                 self.install_dict_keys_match_guard()
 
+    @override
     def call_method(
         self,
         tx,
@@ -514,10 +520,12 @@ class ConstDictVariable(VariableTracker):
         else:
             return super().call_method(tx, name, args, kwargs)
 
+    @override
     def unpack_var_sequence(self, tx):
         self.install_dict_keys_match_guard()
         return [x.vt for x in self.items.keys()]
 
+    @override
     def call_obj_hasattr(self, tx, name):
         # dict not allow setting arbitrary attributes. To check for hasattr, we can just check the __dict__ of the dict.
         # OrderedDict though requires side effects tracking because it supports arbitrary setattr.
@@ -671,9 +679,11 @@ class SetVariable(ConstDictVariable):
     def as_proxy(self):
         return {k.vt.as_proxy() for k in self.set_items}
 
+    @override
     def python_type(self):
         return set
 
+    @override
     def as_python_constant(self):
         return {k.vt.as_python_constant() for k in self.set_items}
 
@@ -776,9 +786,11 @@ class FrozensetVariable(SetVariable):
     def set_items(self):
         return self.items.keys()
 
+    @override
     def python_type(self):
         return frozenset
 
+    @override
     def as_python_constant(self):
         return {k.vt.as_python_constant() for k in self.set_items}
 
@@ -827,9 +839,11 @@ class DictKeySetVariable(SetVariable):
     def set_items(self):
         return self.items
 
+    @override
     def python_type(self):
         return dict_keys
 
+    @override
     def as_python_constant(self):
         return dict.fromkeys(
             {k.vt.as_python_constant() for k in self.set_items}, None
@@ -907,6 +921,7 @@ class DictKeysVariable(DictViewVariable):
         # Returns an iterable of the unpacked items
         return [x.vt for x in self.view_items]
 
+    @override
     def python_type(self):
         return dict_keys
 
@@ -936,5 +951,6 @@ class DictValuesVariable(DictViewVariable):
     def view_items_vt(self):
         return list(self.view_items)
 
+    @override
     def python_type(self):
         return dict_values

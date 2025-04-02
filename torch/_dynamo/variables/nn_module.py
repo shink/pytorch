@@ -29,6 +29,7 @@ import itertools
 import types
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING
+from typing_extensions import override
 
 import torch.nn
 
@@ -177,6 +178,7 @@ class NNModuleVariable(VariableTracker):
     def set_nn_module_stack_source(self, source):
         self.nn_module_stack_source = source
 
+    @override
     def python_type(self):
         return self.module_type
 

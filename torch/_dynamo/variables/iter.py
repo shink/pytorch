@@ -19,6 +19,7 @@ import itertools
 import operator
 import sys
 from typing import Optional, TYPE_CHECKING, Union
+from typing_extensions import override
 
 from .. import polyfills, variables
 from ..bytecode_transformation import create_call_function, create_instruction
@@ -362,6 +363,7 @@ class ZipVariable(IteratorVariable):
         self.index = 0
         self.strict = strict
 
+    @override
     def python_type(self):
         return zip
 
@@ -471,6 +473,7 @@ class MapVariable(ZipVariable):
         super().__init__(iterables, **kwargs)
         self.fn = fn
 
+    @override
     def python_type(self):
         return map
 
@@ -516,6 +519,7 @@ class FilterVariable(IteratorVariable):
         self.iterable = iterable
         self.index = 0
 
+    @override
     def python_type(self):
         return filter
 

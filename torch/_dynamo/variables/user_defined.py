@@ -35,7 +35,7 @@ import types
 import warnings
 import weakref
 from typing import TYPE_CHECKING
-from typing_extensions import is_typeddict
+from typing_extensions import is_typeddict, override
 
 import torch._dynamo.config
 import torch.nn
@@ -702,6 +702,7 @@ class UserDefinedExceptionClassVariable(UserDefinedClassVariable):
         return self.value
 
     @property
+    @override
     def python_type(self):
         return self.value
 
@@ -775,6 +776,7 @@ class UserDefinedObjectVariable(UserDefinedVariable):
     def is_underlying_vt_modified(self, side_effects):
         return False
 
+    @override
     def python_type(self):
         return self.value_type
 
@@ -1515,6 +1517,7 @@ class RemovableHandleVariable(VariableTracker):
         # unreachable due to codegen.add_cache() when the hook is installed
         super().reconstruct(codegen)
 
+    @override
     def python_type(self):
         return RemovableHandleClass
 

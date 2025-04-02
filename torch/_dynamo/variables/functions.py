@@ -31,7 +31,7 @@ import sys
 import types
 from collections.abc import Sequence
 from typing import Any, Callable, Optional, TYPE_CHECKING, TypeVar
-from typing_extensions import Never
+from typing_extensions import Never, override
 from unittest.mock import patch
 
 import torch
@@ -176,6 +176,7 @@ class BaseUserFunctionVariable(VariableTracker):
     def get_name(self):
         return self.get_code().co_name
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -184,6 +185,7 @@ class BaseUserFunctionVariable(VariableTracker):
     ) -> "VariableTracker":
         return tx.inline_user_function_return(self, [*self.self_args(), *args], kwargs)
 
+    @override
     def call_obj_hasattr(
         self, tx: "InstructionTranslator", name: str
     ) -> VariableTracker:
@@ -234,6 +236,7 @@ class UserFunctionVariable(BaseUserFunctionVariable):
         fn = inspect.getattr_static(fn, "_torchdynamo_inline", fn)
         self.fn: types.FunctionType = fn
 
+    @override
     def as_python_constant(self):
         if istype(self, UserFunctionVariable):
             return self.fn
@@ -249,6 +252,7 @@ class UserFunctionVariable(BaseUserFunctionVariable):
     def get_code(self):
         return self.fn.__code__
 
+    @override
     def python_type(self):
         return types.FunctionType
 
@@ -345,17 +349,20 @@ class UserFunctionVariable(BaseUserFunctionVariable):
 
         return result
 
+    @override
     def var_getattr(self, tx: "InstructionTranslator", name: str):
         if name in cmp_name_to_op_mapping:
             return variables.GetAttrVariable(self, name)
         return fn_var_getattr(tx, self.fn, self.source, name)
 
+    @override
     def call_obj_hasattr(
         self, tx: "InstructionTranslator", name: str
     ) -> VariableTracker:
         result = hasattr(self.fn, name)
         return variables.ConstantVariable.create(result)
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -421,6 +428,7 @@ class BuiltinMethodVariable(BaseUserFunctionVariable):
             type(method_self) is frozenset and method_name == "__contains__"
         )
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -495,6 +503,7 @@ class LocalGeneratorObjectVariable(VariableTracker):
     def get_globals(self):
         return self.f_globals
 
+    @override
     def python_type(self):
         return types.GeneratorType
 
@@ -561,6 +570,7 @@ class LocalGeneratorObjectVariable(VariableTracker):
     def _is_generator_exhausted(self):
         return getattr(self.inline_tracer, "generator_exhausted", False)
 
+    @override
     def call_method(
         self,
         tx: "InstructionTranslator",
@@ -797,6 +807,7 @@ class LocalGeneratorFunctionVariable(BaseUserFunctionVariable):
             kwargs,
         )
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -861,9 +872,11 @@ class UserMethodVariable(UserFunctionVariable):
     def self_args(self):
         return [self.obj]
 
+    @override
     def python_type(self):
         return types.MethodType
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -928,6 +941,7 @@ class UserMethodVariable(UserFunctionVariable):
     def inspect_parameter_names(self):
         return super().inspect_parameter_names()[1:]
 
+    @override
     def var_getattr(self, tx: "InstructionTranslator", name: str):
         source = self.source and AttrSource(self.source, name)
         if name == "__self__":
@@ -945,6 +959,7 @@ class WrappedUserMethodVariable(UserMethodVariable):
         self.wrapped = wrapped
         self.context = context
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -965,6 +980,7 @@ class WrappedUserFunctionVariable(UserFunctionVariable):
         self.wrapped = wrapped
         self.context = context
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1034,6 +1050,7 @@ class NestedUserFunctionVariable(BaseUserFunctionVariable):
     def get_code(self):
         return self.code.as_python_constant()
 
+    @override
     def python_type(self):
         return types.FunctionType
 
@@ -1070,6 +1087,7 @@ class NestedUserFunctionVariable(BaseUserFunctionVariable):
         tx.output.side_effects.store_attr(self, name_var.value, val)
         return ConstantVariable(None)
 
+    @override
     def call_method(self, tx, name, args, kwargs):
         if name == "__setattr__":
             return self.call_setattr(tx, *args)
@@ -1108,6 +1126,7 @@ class NestedUserFunctionVariable(BaseUserFunctionVariable):
 
         return result
 
+    @override
     def reconstruct(self, codegen):
         codegen.add_push_null(
             lambda: codegen.load_import_from(__name__, "_create_nested_fn")
@@ -1179,6 +1198,7 @@ class SkipFunctionVariable(VariableTracker):
         self.value = value
         self.reason = reason
 
+    @override
     def as_python_constant(self):
         return self.value
 
@@ -1191,6 +1211,7 @@ class SkipFunctionVariable(VariableTracker):
             install_guard(source.make_guard(GuardBuilder.FUNCTION_MATCH))
         return cls(value, source=source)
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1307,6 +1328,7 @@ class SkipFunctionVariable(VariableTracker):
     def call_obj_hasattr(self, tx: "InstructionTranslator", name):
         return variables.ConstantVariable.create(hasattr(self.value, name))
 
+    @override
     def var_getattr(self, tx: "InstructionTranslator", name: str):
         if name in cmp_name_to_op_mapping:
             return variables.GetAttrVariable(self, name)
@@ -1327,6 +1349,7 @@ class WrapperUserFunctionVariable(VariableTracker):
         self.wrapper_obj = wrapper_obj
         self.attr_to_trace = attr_to_trace
 
+    @override
     def var_getattr(self, tx: "InstructionTranslator", name):
         if name == self.attr_to_trace:
             val = getattr(self.wrapper_obj, self.attr_to_trace)
@@ -1335,6 +1358,7 @@ class WrapperUserFunctionVariable(VariableTracker):
 
         return super().var_getattr(tx, name)
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1405,6 +1429,7 @@ class CollectiveFunctionRewriteVariable(UserFunctionVariable):
         new_fn = _traceable_collective_remaps()[fn]
         return new_fn, _traceable_collectives_source(tx, new_fn)
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1448,6 +1473,7 @@ class CollectiveFunctionRewriteVariable(UserFunctionVariable):
 
 
 class FunctoolsWrapsVariable(UserFunctionVariable):
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1467,9 +1493,11 @@ class FunctoolsWrapsVariable(UserFunctionVariable):
 
 
 class CollectionsNamedTupleFunction(UserFunctionVariable):
+    @override
     def as_python_constant(self):
         return self.fn
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1500,9 +1528,11 @@ class FunctoolsPartialVariable(VariableTracker):
         # on it is sufficient for the tracing purposes.
         self.fake_value = functools.partial(identity)
 
+    @override
     def python_type(self):
         return functools.partial
 
+    @override
     def reconstruct(self, codegen):
         codegen.add_push_null(lambda: codegen.load_import_from("functools", "partial"))
         codegen(self.func)
@@ -1521,6 +1551,7 @@ class FunctoolsPartialVariable(VariableTracker):
     def get_function(self):
         return self.as_python_constant()
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1531,6 +1562,7 @@ class FunctoolsPartialVariable(VariableTracker):
         merged_kwargs = {**self.keywords, **kwargs}
         return self.func.call_function(tx, merged_args, merged_kwargs)
 
+    @override
     def call_obj_hasattr(
         self, tx: "InstructionTranslator", name: str
     ) -> VariableTracker:
@@ -1539,6 +1571,7 @@ class FunctoolsPartialVariable(VariableTracker):
             hasattr(functools.partial(identity), name)
         )
 
+    @override
     def var_getattr(self, tx: "InstructionTranslator", name: str):
         source = self.source and AttrSource(self.source, name)
         # Handle __slots__
@@ -1551,6 +1584,7 @@ class FunctoolsPartialVariable(VariableTracker):
             return variables.ConstDictVariable(items, source=source)
         raise_observed_exception(AttributeError, tx)
 
+    @override
     def as_python_constant(self):
         return functools.partial(
             self.func.as_python_constant(),
@@ -1621,6 +1655,7 @@ class PolyfilledFunctionVariable(VariableTracker):
     def get_function(self):
         return self.as_python_constant()
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1673,6 +1708,7 @@ class PolyfilledFunctionVariable(VariableTracker):
         traceable_function_variable = VariableTracker.build(tx, self.traceable_fn)
         return traceable_function_variable.call_function(tx, args, kwargs)
 
+    @override
     def call_method(
         self,
         tx,
@@ -1727,6 +1763,7 @@ class SysFunctionVariable(VariableTracker):
     def exception(self, tx):
         return self.exc_info(tx).items[1]
 
+    @override
     def call_function(self, tx, args, kwargs):
         if self.value is sys.exc_info:
             return self.exc_info(tx)
@@ -1901,6 +1938,7 @@ class TritonKernelVariable(VariableTracker):
         super().__init__(**kwargs)
         dynamo_triton_hopifier_singleton.init_variable(self, kernel, kernel_idx, grid)
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",
@@ -1911,6 +1949,7 @@ class TritonKernelVariable(VariableTracker):
             self, args, kwargs, tx
         )
 
+    @override
     def call_method(
         self,
         tx,
@@ -1959,6 +1998,7 @@ class TMADescriptorVariable(VariableTracker):
             self.element_size.as_proxy(),
         )
 
+    @override
     def reconstruct(self, codegen):
         codegen.add_push_null(
             lambda: codegen.load_import_from(
@@ -1982,6 +2022,7 @@ class CreateTMADescriptorVariable(VariableTracker):
         super().__init__(**kwargs)
         self.rank = rank
 
+    @override
     def call_function(
         self,
         tx: "InstructionTranslator",

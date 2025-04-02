@@ -26,6 +26,7 @@ import traceback
 import types
 import unittest
 from typing import TYPE_CHECKING
+from typing_extensions import override
 
 import sympy
 
@@ -202,6 +203,7 @@ class TensorVariable(VariableTracker):
     def as_proxy(self):
         return self.proxy
 
+    @override
     def python_type(self):
         return self.class_type
 
@@ -1224,6 +1226,7 @@ class SymNodeVariable(VariableTracker):
         self.sym_num = sym_num
         self._tensor_var = None
 
+    @override
     def python_type(self):
         if isinstance(self.sym_num, SymTypes):
             return self.sym_num.node.pytype
@@ -1380,6 +1383,7 @@ class NumpyNdarrayVariable(TensorVariable):
         )
         return NumpyNdarrayVariable.create(tx, proxy)
 
+    @override
     def python_type(self):
         return np.ndarray
 

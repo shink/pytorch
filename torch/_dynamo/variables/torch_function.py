@@ -35,6 +35,7 @@ import functools
 import inspect
 import operator
 from typing import TYPE_CHECKING
+from typing_extensions import override
 
 import torch._C
 import torch.utils._pytree as pytree
@@ -395,6 +396,7 @@ class TorchFunctionModeVariable(GenericContextWrappingVariable):
     def fn_name(self):
         return type(self.value).__name__
 
+    @override
     def python_type(self):
         return type(self.value)
 
@@ -617,6 +619,7 @@ class TensorWithTFOverrideVariable(TensorVariable):
                 self.global_mangled_class_name(tx), self.class_type
             )
 
+    @override
     def python_type(self):
         return self.class_type
 

@@ -20,6 +20,7 @@ import collections
 import inspect
 import operator
 from typing import Optional, TYPE_CHECKING
+from typing_extensions import override
 
 import torch
 import torch.fx
@@ -207,6 +208,7 @@ class RangeVariable(BaseListVariable):
     def debug_repr(self):
         return self.debug_repr_helper("range(", ")")
 
+    @override
     def python_type(self):
         return range
 
@@ -427,6 +429,7 @@ class CommonListMethodsVariable(BaseListVariable):
 
 
 class ListVariable(CommonListMethodsVariable):
+    @override
     def python_type(self):
         return list
 
@@ -546,6 +549,7 @@ class DequeVariable(CommonListMethodsVariable):
             items = items[-maxlen.as_python_constant() :]
         super().__init__(items, **kwargs)
 
+    @override
     def python_type(self):
         return collections.deque
 
@@ -652,6 +656,7 @@ class DequeVariable(CommonListMethodsVariable):
 
 
 class TupleVariable(BaseListVariable):
+    @override
     def python_type(self):
         return tuple
 
@@ -712,6 +717,7 @@ class SizeVariable(TupleVariable):
     def debug_repr(self):
         return self.debug_repr_helper("torch.Size([", "])")
 
+    @override
     def python_type(self):
         return torch.Size
 
@@ -868,6 +874,7 @@ class NamedTupleVariable(TupleVariable):
         # NamedTupleType(*iterable)
         return repr(self.tuple_cls(*(Lit(x.debug_repr()) for x in self.items)))
 
+    @override
     def python_type(self):
         return self.tuple_cls
 
@@ -1003,6 +1010,7 @@ class SliceVariable(VariableTracker):
     def as_proxy(self):
         return slice(*[x.as_proxy() for x in self.items])
 
+    @override
     def python_type(self):
         return slice
 
@@ -1065,6 +1073,7 @@ class ListIteratorVariable(IteratorVariable):
 
         return super().call_method(tx, name, args, kwargs)
 
+    @override
     def python_type(self):
         return type(iter([]))
 

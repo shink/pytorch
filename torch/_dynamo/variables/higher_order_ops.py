@@ -28,6 +28,7 @@ import logging
 import types
 import warnings
 from typing import Optional, TYPE_CHECKING
+from typing_extensions import override
 
 import torch._C
 import torch.fx
@@ -3083,6 +3084,7 @@ class BaseHOPVariable(WrapHigherOrderVariable):
         self.supports_input_mutation = False
         self.supports_aliasing = False
 
+    @override
     def python_type(self):
         return type(self.value)
 
