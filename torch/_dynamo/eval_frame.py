@@ -1079,8 +1079,8 @@ def explain(
     **extra_kwargs: dict[str, Any],
 ) -> Union[
     Callable[[Callable[..., Any]], Callable[..., Any]],
-    ExplainOutput,
     Callable[..., Any],
+    ExplainOutput,
 ]:
     def inner(*args, **kwargs) -> ExplainOutput:
         # TODO(voz): Do we want a decorator for this?
@@ -1150,7 +1150,9 @@ def explain(
             if f is None:
                 raise RuntimeError("Model can't be None")
             if extra_args or extra_kwargs:
-                raise RuntimeError("args are not allowed in decorator mode")
+                raise RuntimeError(
+                    "Positional or keyword arguments are not allowed in decorator mode"
+                )
             return explain(f)
 
         return decorator
