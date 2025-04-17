@@ -42,7 +42,7 @@ import weakref
 from dataclasses import dataclass
 from enum import Enum
 from os.path import dirname, join
-from typing import Any, Callable, NamedTuple, Optional, TYPE_CHECKING, Union
+from typing import Any, Callable, NamedTuple, Optional, overload, TYPE_CHECKING, Union
 from unittest.mock import patch
 
 import sympy
@@ -103,6 +103,7 @@ from .utils import common_constant_types, compile_times
 if TYPE_CHECKING:
     from torch._subclasses import fake_tensor
 
+    from .backends.debugging import ExplainOutput
     from .types import CacheEntry, DynamoCallback
 
 
@@ -1056,10 +1057,32 @@ def _optimize(
     )
 
 
+@overload
+def explain(
+    f: None = None,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
+
+
+@overload
+def explain(
+    f: Callable[..., Any],
+    *extra_args: list[Any],
+    **extra_kwargs: dict[str, Any],
+) -> Union[Callable[..., Any], ExplainOutput]: ...
+
+
 # TODO(voz): Consider making "explain" output alongside a run / part of a run
 @patch("torch._dynamo.symbolic_convert.explain", True)
-def explain(f, *extra_args, **extra_kwargs):
-    def inner(*args, **kwargs):
+def explain(
+    f: Optional[Callable[..., Any]] = None,
+    *extra_args: list[Any],
+    **extra_kwargs: dict[str, Any],
+) -> Union[
+    Callable[[Callable[..., Any]], Callable[..., Any]],
+    ExplainOutput,
+    Callable[..., Any],
+]:
+    def inner(*args, **kwargs) -> ExplainOutput:
         # TODO(voz): Do we want a decorator for this?
         from . import reset  # type: ignore[attr-defined]
 
@@ -1117,6 +1140,20 @@ def explain(f, *extra_args, **extra_kwargs):
             out_guards,
             compile_time,
         )
+
+    # Decorator mode
+    if f is None:
+
+        def decorator(
+            f: Callable[..., Any],
+        ) -> Union[Callable[..., Any], ExplainOutput]:
+            if f is None:
+                raise RuntimeError("Model can't be None")
+            if extra_args or extra_kwargs:
+                raise RuntimeError("args are not allowed in decorator mode")
+            return explain(f)
+
+        return decorator
 
     if extra_args or extra_kwargs:
         warnings.warn(
