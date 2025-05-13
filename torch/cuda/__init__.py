@@ -18,13 +18,12 @@ import threading
 import traceback
 import warnings
 from functools import lru_cache
-from typing import Any, Callable, cast, Optional, Union
+from typing import Any, Callable, cast, Optional, TYPE_CHECKING, Union
 
 import torch
 import torch._C
 from torch import device as _device
 from torch._utils import _dummy_type, _LazySeedTracker, classproperty
-from torch.types import Device
 
 from . import gds
 from ._utils import _get_device_index
@@ -38,6 +37,9 @@ from .graphs import (
 from .streams import Event, ExternalStream, Stream
 
 
+if TYPE_CHECKING:
+    from torch.types import Device as _device_t
+
 try:
     from torch._C import _cudart  # type: ignore[attr-defined]
 except ImportError:
@@ -50,7 +52,6 @@ _queued_calls: list[
     tuple[Callable[[], None], list[str]]
 ] = []  # don't invoke these until initialization occurs
 _is_in_bad_fork = getattr(torch._C, "_cuda_isInBadFork", lambda: False)
-_device_t = Union[_device, str, int, None]
 
 _HAS_PYNVML = False
 _PYNVML_ERR = None
@@ -539,7 +540,7 @@ def set_device(device: torch.types.Device) -> None:
         torch._C._cuda_setDevice(device)
 
 
-def get_device_name(device: Optional[_device_t] = None) -> str:
+def get_device_name(device: Optional["_device_t"] = None) -> str:
     r"""Get the name of a device.
 
     Args:
@@ -554,7 +555,7 @@ def get_device_name(device: Optional[_device_t] = None) -> str:
     return get_device_properties(device).name
 
 
-def get_device_capability(device: Optional[_device_t] = None) -> tuple[int, int]:
+def get_device_capability(device: Optional["_device_t"] = None) -> tuple[int, int]:
     r"""Get the cuda capability of a device.
 
     Args:
@@ -571,7 +572,9 @@ def get_device_capability(device: Optional[_device_t] = None) -> tuple[int, int]
     return prop.major, prop.minor
 
 
-def get_device_properties(device: Optional[_device_t] = None) -> _CudaDeviceProperties:
+def get_device_properties(
+    device: Optional["_device_t"] = None,
+) -> _CudaDeviceProperties:
     r"""Get the properties of a device.
 
     Args:
@@ -590,9 +593,7 @@ def get_device_properties(device: Optional[_device_t] = None) -> _CudaDeviceProp
     return _get_device_properties(device)  # type: ignore[name-defined]
 
 
-def can_device_access_peer(
-    device: torch.types.Device, peer_device: torch.types.Device
-) -> bool:
+def can_device_access_peer(device: "_device_t", peer_device: "_device_t") -> bool:
     r"""Check if peer access between two devices is possible."""
     _lazy_init()
     device = _get_device_index(device, optional=True)
@@ -1044,7 +1045,7 @@ def current_device() -> int:
     return torch._C._cuda_getDevice()
 
 
-def synchronize(device: Optional[_device_t] = None) -> None:
+def synchronize(device: Optional["_device_t"] = None) -> None:
     r"""Wait for all kernels in all streams on a CUDA device to complete.
 
     Args:
@@ -1070,7 +1071,7 @@ def ipc_collect():
     return torch._C._cuda_ipc_collect()
 
 
-def current_stream(device: Optional[_device_t] = None) -> Stream:
+def current_stream(device: Optional["_device_t"] = None) -> Stream:
     r"""Return the currently selected :class:`Stream` for a given device.
 
     Args:
@@ -1088,7 +1089,7 @@ def current_stream(device: Optional[_device_t] = None) -> Stream:
     )
 
 
-def default_stream(device: Optional[_device_t] = None) -> Stream:
+def default_stream(device: Optional["_device_t"] = None) -> Stream:
     r"""Return the default :class:`Stream` for a given device.
 
     Args:
@@ -1107,7 +1108,7 @@ def default_stream(device: Optional[_device_t] = None) -> Stream:
 
 
 def get_stream_from_external(
-    data_ptr: int, device: Optional[_device_t] = None
+    data_ptr: int, device: Optional["_device_t"] = None
 ) -> Stream:
     r"""Return a :class:`Stream` from an externally allocated CUDA stream.
 
